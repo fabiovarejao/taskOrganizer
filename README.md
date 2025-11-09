@@ -1,5 +1,9 @@
 # TaskOrganizer – Guia Rápido
 
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927)
+
 Este README é direto ao ponto para subir e testar a Task Organizer API localmente, dentro de um container Docker. 
 
 ## Requisitos
@@ -96,7 +100,8 @@ $env:ASPNETCORE_URLS = "http://localhost:5000"; dotnet run
 
 4) Acesse: http://localhost:5000/swagger
 
-## Testes
+
+### Testes Unitários
 
 Na raiz do repositório:
 
@@ -104,11 +109,27 @@ Na raiz do repositório:
 dotnet test
 ```
 
-## Endpoints (resumo)
+### Testes Manuais via Postman
 
-- **Projetos**: `GET /projects?userId=...`, `POST /projects`, `DELETE /projects/{projectId}`
-- **Tarefas**: `GET /projects/{projectId}/tasks`, `POST /projects/{projectId}/tasks`, `PUT /tasks/{taskId}/status?newStatus=..&userId=..`, `DELETE /tasks/{taskId}`, `POST /tasks/{taskId}/comments`, `GET /tasks/{taskId}/history`
-- **Relatórios**: `GET /reports/completed-per-user?userId=...`
+1. Abra o **Postman**
+2. Clique em **Import** → **File**
+3. Selecione o arquivo: `docs/TaskOrganizer.postman_collection.json`
+4. Configure a variável `baseUrl` para `http://localhost:5000`
+5. Execute as requisições na ordem da collection
+
+### Script de Validação Automatizada
+
+Execute o checklist completo (certifique-se que a API está rodando):
+
+```powershell
+.\docs\test-checklist.ps1
+```
+
+**Se der erro de permissão**, execute antes:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
+```
 
 ## Notas rápidas
 
@@ -116,3 +137,101 @@ dotnet test
 - Banco: SQL Server 2022 em container (`tasks-sql`)
 - Migrations automáticas quando `APPLY_MIGRATIONS=true`
 - Para encoding correto (acentos): use o método de seed via docker cp + sqlcmd -i
+
+---
+
+## 📋 Fase 2: Refinamento (Questões para o PO)
+
+### 1. Regras de Prioridade de Tarefas
+**A prioridade é imutável por qual motivo de negócio?**
+
+Existe algum cenário onde seria necessário ajustar a prioridade? Por exemplo, quando uma tarefa se torna mais urgente devido a mudanças no projeto?
+
+### 2. Limite de 20 Tarefas por Projeto
+**Este limite é fixo ou pode variar por tipo de projeto?**
+
+Projetos maiores ou de longo prazo poderiam ter um limite maior? Devemos alertar o usuário quando estiver próximo do limite?
+
+### 3. Hierarquia e Permissões de Usuários
+**Devemos implementar controle de permissões baseado em cargos?**
+
+Atualmente apenas Gerentes podem gerar relatórios. Devemos expandir esse modelo de permissões? Por exemplo:
+- Apenas Gerentes podem criar/excluir projetos?
+- Digamos que Analistas poderiam apenas visualizar e comentar tarefas?
+- Em caso de termos Especialistas, teriam permissões específicas diferentes?
+
+### 4. Status e Ciclo de Vida das Tarefas
+**Quais são todos os status possíveis de uma tarefa?**
+
+O que acha de acrescentar Bloqueada, Cancelada? 
+
+### 5. Exclusão de Projetos e Dados Históricos
+**A exclusão de projetos deve ser física ou lógica?**
+
+É importante manter histórico de projetos excluídos para auditoria? Tarefas concluídas também impedem a exclusão do projeto ou apenas as pendentes?
+
+### 6. Notificações e Alertas
+**O sistema deve notificar usuários sobre alterações em suas tarefas?**
+
+Devemos implementar notificações quando:
+- Uma tarefa é atribuída ao usuário?
+- Um comentário é adicionado à tarefa?
+- O prazo está próximo do vencimento?
+
+---
+
+## 🚀 Fase 3: Melhorias Futuras
+
+### 1. Substituir Lazy Loading por Eager Loading Estratégico
+Objetivo de melhorar performance e evitar o problema de N+1 queries.
+
+---
+
+### 2. Implementar Paginação em Todas as Listagens
+Objetivo de evitar sobrecarga quando há muitos registros, melhorar a experiência do usuário e menor consumo de memória.
+
+---
+
+### 3. Adicionar Sistema de Cache com Redis
+**Objetivo:** Reduzir a quantidade de leituras repetidas no SQL para dados consultados com frequência.
+
+Implementar cache para:
+- Lista de projetos por usuário
+- Detalhes de tarefas
+- Estatísticas de dashboard
+
+**Impacto esperado:** Pode reduzir significativamente a carga de leitura do banco de dados.
+
+---
+
+### 4. TaskHistory em MongoDB (Opcional – para alto volume)
+Objetivo de manter dados transacionais (Projects/Tasks/Users) no SQL Server e mover apenas o histórico (TaskHistory) para MongoDB quando o volume de eventos crescer muito.
+
+Só adotar quando o histórico começar a pesar em queries ou storage do SQL; até lá manter tudo no mesmo banco reduz complexidade.
+
+---
+
+### 5. Adicionar Health Checks
+**Objetivo:** Monitorar saúde da aplicação e dependências (SQL Server, Redis, etc).
+
+**Impacto:** Detecção proativa de problemas antes que afetem usuários.
+
+---
+
+### 6. Adicionar Autenticação e Autorização com JWT
+**Objetivo:** Proteger a API e implementar controle de acesso por cargo.
+
+**Impacto:** Segurança e controle granular de permissões (ex: apenas Managers podem deletar projetos).
+
+---
+
+### 7. Criar Sistema de Relatórios e Dashboards
+**Objetivo:** Fornecer insights sobre produtividade e progresso.
+
+Relatórios sugeridos:
+- Tarefas concluídas por usuário/período
+- Projetos próximos do limite de tarefas
+- Média de tempo para conclusão de tarefas
+- Usuários mais ativos/comentários
+
+**Impacto:** Tomada de decisão baseada em dados.
