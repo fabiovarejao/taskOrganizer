@@ -1,0 +1,1019 @@
+{
+	"info": {
+		"name": "Task Organizer API",
+		"description": "Collection completa para testar todos os endpoints e regras de negócio da Task Organizer API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12345"
+	},
+	"auth": {
+		"type": "noauth"
+	},
+	"item": [
+		{
+			"name": "1. Projects",
+			"item": [
+				{
+					"name": "List Projects by User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"if (pm.response.json().length > 0) {",
+									"    pm.test(\"Project has required fields\", function () {",
+									"        const project = pm.response.json()[0];",
+									"        pm.expect(project).to.have.property('id');",
+									"        pm.expect(project).to.have.property('name');",
+									"        pm.expect(project).to.have.property('userId');",
+									"        pm.expect(project).to.have.property('taskCount');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects?userId={{aliceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{aliceId}}",
+									"description": "Alice (Manager)"
+								}
+							]
+						},
+						"description": "Lista todos os projetos de um usuário específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has project ID\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.collectionVariables.set(\"newProjectId\", jsonData.id);",
+									"});",
+									"",
+									"pm.test(\"Project has correct name\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.name).to.eql(\"Projeto Teste QA\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Projeto Teste QA\",\n  \"userId\": \"{{aliceId}}\",\n  \"description\": \"Projeto criado via Postman para testes de QA\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects"]
+						},
+						"description": "Cria um novo projeto"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Project - Validation Error (Empty Name)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Response contains validation errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"\",\n  \"userId\": \"{{aliceId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects"]
+						},
+						"description": "Tenta criar projeto com nome vazio (deve falhar)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Project (Empty)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204 or 404\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{newProjectId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{newProjectId}}"]
+						},
+						"description": "Deleta um projeto que não tem tarefas pendentes"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Project - Blocked (With Pending Tasks)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions pending tasks\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include('pending');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{projectAlphaId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{projectAlphaId}}"]
+						},
+						"description": "Tenta deletar projeto com tarefas pendentes (RN-03 - deve falhar)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints relacionados a projetos"
+		},
+		{
+			"name": "2. Tasks",
+			"item": [
+				{
+					"name": "List Tasks by Project",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"if (pm.response.json().length > 0) {",
+									"    pm.test(\"Task has required fields\", function () {",
+									"        const task = pm.response.json()[0];",
+									"        pm.expect(task).to.have.property('id');",
+									"        pm.expect(task).to.have.property('title');",
+									"        pm.expect(task).to.have.property('status');",
+									"        pm.expect(task).to.have.property('priority');",
+									"        pm.expect(task).to.have.property('projectId');",
+									"    });",
+									"    ",
+									"    // Salvar primeiro taskId para testes posteriores",
+									"    pm.collectionVariables.set(\"existingTaskId\", pm.response.json()[0].id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{projectAlphaId}}/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{projectAlphaId}}", "tasks"]
+						},
+						"description": "Lista todas as tarefas de um projeto"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has task ID\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.collectionVariables.set(\"newTaskId\", jsonData.id);",
+									"});",
+									"",
+									"pm.test(\"Task has correct priority\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.priority).to.eql(\"High\");",
+									"});",
+									"",
+									"pm.test(\"Task status is Pending\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"Pending\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Implementar novo recurso de teste\",\n  \"priority\": \"High\",\n  \"responsibleUserId\": \"{{bobId}}\",\n  \"description\": \"Tarefa criada via Postman para validação de QA\",\n  \"dueDate\": \"2024-12-31\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{projectAlphaId}}/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{projectAlphaId}}", "tasks"]
+						},
+						"description": "Cria uma nova tarefa em um projeto (RN-01: prioridade será imutável)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Task - Validation Error (Empty Title)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Response contains validation errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"\",\n  \"priority\": \"High\",\n  \"responsibleUserId\": \"{{bobId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{projectAlphaId}}/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{projectAlphaId}}", "tasks"]
+						},
+						"description": "Tenta criar tarefa com título vazio (deve falhar)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status to InProgress",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Task status updated\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"InProgress\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/status?newStatus=InProgress&userId={{bobId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "status"],
+							"query": [
+								{
+									"key": "newStatus",
+									"value": "InProgress"
+								},
+								{
+									"key": "userId",
+									"value": "{{bobId}}"
+								}
+							]
+						},
+						"description": "Atualiza o status da tarefa (RN-04: deve criar histórico)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task Status to Completed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Task status is Completed\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"Completed\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/status?newStatus=Completed&userId={{bobId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "status"],
+							"query": [
+								{
+									"key": "newStatus",
+									"value": "Completed"
+								},
+								{
+									"key": "userId",
+									"value": "{{bobId}}"
+								}
+							]
+						},
+						"description": "Completa a tarefa"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Comment to Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Este é um comentário de teste adicionado pelo QA\",\n  \"userId\": \"{{aliceId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "comments"]
+						},
+						"description": "Adiciona um comentário à tarefa (RN-04: deve criar histórico)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Comment - Validation Error (Empty Message)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Response contains validation errors\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('errors');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"\",\n  \"userId\": \"{{aliceId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/comments",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "comments"]
+						},
+						"description": "Tenta adicionar comentário vazio (deve falhar - validação de domain)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task History",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"History contains status changes\", function () {",
+									"    const history = pm.response.json();",
+									"    const statusChanges = history.filter(h => h.field === 'Status');",
+									"    pm.expect(statusChanges.length).to.be.above(0);",
+									"});",
+									"",
+									"pm.test(\"History has required fields\", function () {",
+									"    if (pm.response.json().length > 0) {",
+									"        const entry = pm.response.json()[0];",
+									"        pm.expect(entry).to.have.property('field');",
+									"        pm.expect(entry).to.have.property('oldValue');",
+									"        pm.expect(entry).to.have.property('newValue');",
+									"        pm.expect(entry).to.have.property('changedAt');",
+									"        pm.expect(entry).to.have.property('changedByUserId');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/history",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "history"]
+						},
+						"description": "Obtém o histórico completo de mudanças da tarefa (RN-04)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task History (Actor Verification)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const history = pm.response.json();",
+									"pm.test(\"History includes Status by Bob\", function () {",
+									"    const bobId = (pm.collectionVariables.get(\"bobId\") || \"\").toLowerCase();",
+									"    const found = history.some(h => h.field === 'Status' && (''+h.changedByUserId).toLowerCase() === bobId);",
+									"    pm.expect(found).to.be.true;",
+									"});",
+									"pm.test(\"History includes Comment by Alice\", function () {",
+									"    const aliceId = (pm.collectionVariables.get(\"aliceId\") || \"\").toLowerCase();",
+									"    const found = history.some(h => h.field === 'Comment' && (''+h.changedByUserId).toLowerCase() === aliceId);",
+									"    pm.expect(found).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}/history",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}", "history"]
+						},
+						"description": "Valida que ChangedByUserId está correto para Status (Bob) e Comment (Alice)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/tasks/{{newTaskId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["tasks", "{{newTaskId}}"]
+						},
+						"description": "Deleta uma tarefa"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints relacionados a tarefas"
+		},
+		{
+			"name": "3. Reports",
+			"item": [
+				{
+					"name": "Get Completed Tasks Report (Manager)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"if (pm.response.json().length > 0) {",
+									"    pm.test(\"Report has required fields\", function () {",
+									"        const report = pm.response.json()[0];",
+									"        pm.expect(report).to.have.property('userId');",
+									"        pm.expect(report).to.have.property('userName');",
+									"        pm.expect(report).to.have.property('completedTasks');",
+									"        pm.expect(report).to.have.property('averagePerDay');",
+									"    });",
+									"    ",
+									"    pm.test(\"Average is calculated correctly\", function () {",
+									"        const report = pm.response.json()[0];",
+									"        const expected = Math.round((report.completedTasks / 30) * 100) / 100;",
+									"        pm.expect(report.averagePerDay).to.be.closeTo(expected, 0.01);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/reports/completed-per-user?userId={{aliceId}}&projectId={{projectAlphaId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["reports", "completed-per-user"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{aliceId}}",
+									"description": "Alice (Manager) - deve ter acesso"
+								},
+								{
+									"key": "projectId",
+									"value": "{{projectAlphaId}}"
+								}
+							]
+						},
+						"description": "Obtém relatório de tarefas completadas (RN-05: apenas Managers, RN-06: média dos últimos 30 dias)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Report - Forbidden (Developer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions Manager\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include('Manager');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/reports/completed-per-user?userId={{bobId}}&projectId={{projectAlphaId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["reports", "completed-per-user"],
+							"query": [
+								{
+									"key": "userId",
+									"value": "{{bobId}}",
+									"description": "Bob (Developer) - deve ser bloqueado"
+								},
+								{
+									"key": "projectId",
+									"value": "{{projectAlphaId}}"
+								}
+							]
+						},
+						"description": "Tenta acessar relatório com Developer (RN-05: deve falhar com 403)"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de relatórios (apenas Managers)"
+		},
+		{
+			"name": "4. Business Rules Validation",
+			"item": [
+				{
+					"name": "RN-02: Create 21st Task (Should Fail)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Este teste assume que você criará 20 tarefas primeiro manualmente",
+									"// ou através de um script no Runner do Postman"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message mentions task limit\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error).to.include('maximum');",
+									"    pm.expect(jsonData.error).to.include('20');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Tarefa 21 - Deve falhar\",\n  \"priority\": \"Low\",\n  \"responsibleUserId\": \"{{bobId}}\",\n  \"description\": \"Esta tarefa deve falhar se o projeto já tiver 20 tarefas\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/projects/{{projectAlphaId}}/tasks",
+							"host": ["{{baseUrl}}"],
+							"path": ["projects", "{{projectAlphaId}}", "tasks"]
+						},
+						"description": "Valida RN-02: Limite de 20 tarefas por projeto (execute após criar 20 tarefas)"
+					},
+					"response": []
+				}
+			],
+			"description": "Testes específicos para validação das regras de negócio"
+		},
+		{
+			"name": "5. Users",
+			"item": [
+				{
+					"name": "List All Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function () {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"Returns at least 3 users from seed\", function () {",
+									"    pm.expect(pm.response.json().length).to.be.at.least(3);",
+									"});",
+									"",
+									"if (pm.response.json().length > 0) {",
+									"    pm.test(\"User has required fields\", function () {",
+									"        const user = pm.response.json()[0];",
+									"        pm.expect(user).to.have.property('id');",
+									"        pm.expect(user).to.have.property('userName');",
+									"        pm.expect(user).to.have.property('position');",
+									"    });",
+									"",
+									"    pm.test(\"Alice is Manager\", function () {",
+									"        const alice = pm.response.json().find(u => u.id === pm.collectionVariables.get('aliceId'));",
+									"        pm.expect(alice).to.exist;",
+									"        pm.expect(alice.position).to.eql('Manager');",
+									"    });",
+									"",
+									"    pm.test(\"Bob and Charlie exist with correct positions\", function () {",
+									"        const users = pm.response.json();",
+									"        const bob = users.find(u => u.id === pm.collectionVariables.get('bobId'));",
+									"        const charlie = users.find(u => u.id === pm.collectionVariables.get('charlieId'));",
+									"        pm.expect(bob).to.exist;",
+									"        pm.expect(charlie).to.exist;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["users"]
+						},
+						"description": "Lista todos os usuários do sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID (Alice - Manager)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"User is Alice\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('aliceId'));",
+									"});",
+									"",
+									"pm.test(\"Alice is Manager\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.position).to.eql('Manager');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{aliceId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "{{aliceId}}"]
+						},
+						"description": "Busca um usuário específico por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID (Bob - Analyst)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"User is Bob\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('bobId'));",
+									"});",
+									"",
+									"pm.test(\"Bob is Analyst\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.position).to.eql('Analyst');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{bobId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "{{bobId}}"]
+						},
+						"description": "Valida que Bob tem posição correta"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID (Not Found)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/99999999-9999-9999-9999-999999999999",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "99999999-9999-9999-9999-999999999999"]
+						},
+						"description": "Testa resposta para usuário inexistente"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de gerenciamento de usuários"
+		}
+	],
+	"event": [],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "aliceId",
+			"value": "11111111-1111-1111-1111-111111111111",
+			"type": "string",
+			"description": "Alice - Manager"
+		},
+		{
+			"key": "bobId",
+			"value": "22222222-2222-2222-2222-222222222222",
+			"type": "string",
+			"description": "Bob - Developer"
+		},
+		{
+			"key": "charlieId",
+			"value": "33333333-3333-3333-3333-333333333333",
+			"type": "string",
+			"description": "Charlie - Developer"
+		},
+		{
+			"key": "projectAlphaId",
+			"value": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			"type": "string",
+			"description": "Projeto Alpha (Alice)"
+		},
+		{
+			"key": "projectBetaId",
+			"value": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+			"type": "string",
+			"description": "Projeto Beta (Bob)"
+		},
+		{
+			"key": "newProjectId",
+			"value": "",
+			"type": "string",
+			"description": "ID do projeto criado durante os testes"
+		},
+		{
+			"key": "newTaskId",
+			"value": "",
+			"type": "string",
+			"description": "ID da tarefa criada durante os testes"
+		},
+		{
+			"key": "existingTaskId",
+			"value": "",
+			"type": "string",
+			"description": "ID de uma tarefa existente (seed)"
+		}
+	]
+}

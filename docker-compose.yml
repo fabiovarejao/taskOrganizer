@@ -1,0 +1,38 @@
+services:
+  sqlserver:
+    env_file:
+      - .env
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: tasks-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      # SA_PASSWORD will be read from .env
+      SA_PASSWORD: "${SA_PASSWORD}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '$$SA_PASSWORD' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  api:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: src/TaskOrganizer.Api/Dockerfile
+    image: taskorganizer-api:latest
+    depends_on:
+      - sqlserver
+    environment:
+      ConnectionStrings__DefaultConnection: "${CONNECTION_STRING}"
+      ApplyMigrations: "${APPLY_MIGRATIONS}"
+    ports:
+      - "5000:80"
+    restart: always
+
+volumes:
+  mssql_data:

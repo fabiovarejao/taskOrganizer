@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Exclude EF migrations, designer and generated files from coverlet instrumentation -->
+    <!-- Patterns use forward slashes and are applied to all projects in the repo -->
+    <ExcludeByFile>**/Migrations/**/*.cs;**/Migrations/*.cs;**/*Migrations*.cs;**/*Designer.cs;**/*.Designer.cs;**/*Generated*.cs;**/*.g.cs</ExcludeByFile>
+  </PropertyGroup>
+</Project>

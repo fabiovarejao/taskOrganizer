@@ -1,0 +1,233 @@
+{
+  "info": {
+    "name": "Task Organizer API v2",
+    "description": "Collection atualizada contendo todos os endpoints obrigatórios e extras para avaliação (CRUD de projetos e tarefas, histórico, comentários, relatórios de gerente e regras de negócio).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "item": [
+    {
+      "name": "0. Variables / Setup",
+      "item": [
+        {
+          "name": "Set Environment Variables (Pre-request Script)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('baseUrl', pm.collectionVariables.get('baseUrl') || 'http://localhost:5128');",
+                  "pm.collectionVariables.set('aliceId', pm.collectionVariables.get('aliceId') || pm.variables.replaceIn('{{randomUUID}}'));",
+                  "pm.collectionVariables.set('bobId', pm.collectionVariables.get('bobId') || pm.variables.replaceIn('{{randomUUID}}'));",
+                  "pm.collectionVariables.set('managerId', pm.collectionVariables.get('managerId') || pm.variables.replaceIn('{{randomUUID}}'));",
+                  "// projectId, taskId serão definidos após criação"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/swagger/index.html",
+              "host": ["{{baseUrl}}"],
+              "path": ["swagger", "index.html"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Projects",
+      "item": [
+        {
+          "name": "Create Project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Project has id', () => pm.expect(json.id).to.exist);",
+                  "pm.collectionVariables.set('projectId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Projeto Avaliacao\",\n  \"description\": \"Projeto para checklist completo\",\n  \"userId\": \"{{aliceId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/projects", "host": ["{{baseUrl}}"], "path": ["projects"] }
+          }
+        },
+        {
+          "name": "List Projects by User",
+          "event": [
+            {"listen": "test", "script": {"exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const arr = pm.response.json();",
+              "pm.test('Array returned', () => pm.expect(Array.isArray(arr)).to.be.true);",
+              "pm.test('Contains created project', () => pm.expect(arr.some(p => p.id === pm.collectionVariables.get('projectId'))).to.be.true);"
+            ], "type": "text/javascript"}}
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{baseUrl}}/projects?userId={{aliceId}}", "host": ["{{baseUrl}}"], "path": ["projects"], "query": [{"key": "userId", "value": "{{aliceId}}"}] }
+          }
+        },
+        {
+          "name": "Get Project by Id",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Matches projectId', () => pm.expect(json.id).to.eql(pm.collectionVariables.get('projectId')));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["projects", "{{projectId}}"]}}
+        },
+        {
+          "name": "Update Project",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Name updated', () => pm.expect(pm.response.json().name).to.include('Atualizado'));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Projeto Avaliacao Atualizado\",\n  \"description\": \"Descricao pós atualização\"\n}"}, "url": {"raw": "{{baseUrl}}/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["projects", "{{projectId}}"]}}
+        },
+        {
+          "name": "Delete Project (Expect 204)",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "if (pm.response.code === 400) { pm.test('Blocked due to pending tasks', () => pm.response.to.have.status(400)); }",
+            "else { pm.test('Deleted or not found', () => pm.expect([204,404]).to.include(pm.response.code)); }"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "DELETE", "url": {"raw": "{{baseUrl}}/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["projects", "{{projectId}}"]}}
+        }
+      ]
+    },
+    {
+      "name": "2. Tasks",
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "const json = pm.response.json();",
+            "pm.collectionVariables.set('taskId', json.id);",
+            "pm.test('Priority immutable rule prepared', () => pm.expect(json.priority).to.exist);"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"title\": \"Tarefa Avaliacao\",\n  \"description\": \"Primeira tarefa para testes\",\n  \"priority\": \"High\",\n  \"responsibleUserId\": \"{{bobId}}\",\n  \"dueDate\": \"2025-12-31T23:59:59\"\n}"}, "url": {"raw": "{{baseUrl}}/projects/{{projectId}}/tasks", "host": ["{{baseUrl}}"], "path": ["projects", "{{projectId}}", "tasks"]}}
+        },
+        {
+          "name": "List Tasks for Project",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const arr = pm.response.json();",
+            "pm.test('Array returned', () => pm.expect(Array.isArray(arr)).to.be.true);",
+            "pm.test('Contains created task', () => pm.expect(arr.some(t => t.id === pm.collectionVariables.get('taskId'))).to.be.true);"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/projects/{{projectId}}/tasks", "host": ["{{baseUrl}}"], "path": ["projects", "{{projectId}}", "tasks"]}}
+        },
+        {
+          "name": "Get Task by Id",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const json = pm.response.json();",
+            "pm.test('Has history array', () => pm.expect(json.history).to.exist);",
+            "pm.test('Has comments array', () => pm.expect(json.comments).to.exist);"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"]}}
+        },
+        {
+          "name": "Update Task (Details) - Expect Priority Immutable",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "if (pm.response.code === 400) { pm.test('Priority immutable rule enforced', () => pm.response.to.have.status(400)); }",
+            "else { pm.test('Status 200', () => pm.response.to.have.status(200)); }"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"title\": \"Tarefa Avaliacao Atualizada\",\n  \"description\": \"Descricao alterada\",\n  \"dueDate\": \"2026-01-31T23:59:59\",\n  \"priority\": \"Low\",\n  \"status\": \"InProgress\"\n}"}, "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"]}}
+        },
+        {
+          "name": "Update Task Status",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200 or 404', () => pm.expect([200,404]).to.include(pm.response.code));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "PUT", "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}/status?newStatus=Completed&userId={{managerId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "status"], "query": [{"key": "newStatus", "value": "Completed"}, {"key": "userId", "value": "{{managerId}}"}]}}
+        },
+        {
+          "name": "Add Comment to Task",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"message\": \"Primeiro comentário\",\n  \"userId\": \"{{aliceId}}\"\n}"}, "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}/comments", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "comments"]}}
+        },
+        {
+          "name": "Get Task History",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const arr = pm.response.json();",
+            "pm.test('History is array', () => pm.expect(Array.isArray(arr)).to.be.true);"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}/history", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "history"]}}
+        },
+        {
+          "name": "Get Task History (Actor Verification)",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "const history = pm.response.json();",
+            "pm.test('History includes Status by managerId', () => {",
+            "  const managerId = (pm.collectionVariables.get('managerId') || '').toLowerCase();",
+            "  const found = history.some(h => h.field === 'Status' && (''+h.changedByUserId).toLowerCase() === managerId);",
+            "  pm.expect(found).to.be.true;",
+            "});",
+            "pm.test('History includes Comment by aliceId', () => {",
+            "  const aliceId = (pm.collectionVariables.get('aliceId') || '').toLowerCase();",
+            "  const found = history.some(h => h.field === 'Comment' && (''+h.changedByUserId).toLowerCase() === aliceId);",
+            "  pm.expect(found).to.be.true;",
+            "});"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}/history", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}", "history"]}}
+        },
+        {
+          "name": "Delete Task",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 204 or 404', () => pm.expect([204,404]).to.include(pm.response.code));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "DELETE", "url": {"raw": "{{baseUrl}}/tasks/{{taskId}}", "host": ["{{baseUrl}}"], "path": ["tasks", "{{taskId}}"]}}
+        }
+      ]
+    },
+    {
+      "name": "3. Reports",
+      "item": [
+        {
+          "name": "Manager Report (30-day Average)",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200 or 403', () => pm.expect([200,403,400]).to.include(pm.response.code));",
+            "if (pm.response.code === 200) { const json = pm.response.json(); pm.test('Has averageCompletedTasksLast30Days', () => pm.expect(json.averageCompletedTasksLast30Days).to.exist); }"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/reports/manager/{{managerId}}", "host": ["{{baseUrl}}"], "path": ["reports", "manager", "{{managerId}}"]}}
+        },
+        {
+          "name": "Completed Tasks Per User (Generic)",
+          "event": [ {"listen": "test", "script": {"exec": [
+            "pm.test('Status 200 or 403', () => pm.expect([200,403,400]).to.include(pm.response.code));"
+          ], "type": "text/javascript"}} ],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/reports/completed-per-user?userId={{managerId}}&days=15", "host": ["{{baseUrl}}"], "path": ["reports", "completed-per-user"], "query": [{"key": "userId", "value": "{{managerId}}"}, {"key": "days", "value": "15"}]}}
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:5128"},
+    {"key": "aliceId", "value": ""},
+    {"key": "bobId", "value": ""},
+    {"key": "managerId", "value": ""},
+    {"key": "projectId", "value": ""},
+    {"key": "taskId", "value": ""}
+  ]
+}

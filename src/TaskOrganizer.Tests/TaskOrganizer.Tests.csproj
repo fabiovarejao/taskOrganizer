@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <!-- Add coverlet.msbuild so we can enable ExcludeByFile at build time and reliably generate cobertura output -->
+    <PackageReference Include="coverlet.msbuild" Version="3.2.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.10" />
+  </ItemGroup>
+
+  <!-- Configure coverlet.msbuild to collect coverage and exclude migrations/designer/generated files -->
+  <PropertyGroup>
+    <!-- Enable collection when running dotnet test without the XPlat collector -->
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <!-- Keep output under the TestResults folder (coverlet will append project/test id) -->
+    <CoverletOutput>$(MSBuildProjectDirectory)\..\..\TestResults\</CoverletOutput>
+    <!-- Exclude EF migrations and generated files from instrumentation -->
+    <ExcludeByFile>**\Migrations\**\*.cs;**\Migrations\*.cs;**\*Designer.cs;**\*.Designer.cs;**\*Generated*.cs;**\*.g.cs</ExcludeByFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TaskOrganizer.Domain\TaskOrganizer.Domain.csproj" />
+    <ProjectReference Include="..\TaskOrganizer.Application\TaskOrganizer.Application.csproj" />
+    <ProjectReference Include="..\TaskOrganizer.Api\TaskOrganizer.Api.csproj" />
+  </ItemGroup>
+
+</Project>

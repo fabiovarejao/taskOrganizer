@@ -1,0 +1,35 @@
+# Ignore env files with secrets
+.env
+.env.local
+
+# Visual Studio / JetBrains
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build artifacts
+bin/
+obj/
+
+# Docker
+**/bin/*
+**/obj/*
+
+# Logs
+*.log
+
+# Coverage
+coverage.opencover.xml
+coverage.*
+
+# Test Results
+TestResults/
+*.trx
+*.coverage
+
+# Rider
+.idea/
+*.sln.iml

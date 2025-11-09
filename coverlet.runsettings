@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!-- Exclude migration, designer and generated files from coverage -->
+          <ExcludeByFile>**/Migrations/**/*.cs;**/Migrations/*.cs;**/*Migrations*.cs;**/*Designer.cs;**/*.Designer.cs;**/*Generated*.cs;**/*.g.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
