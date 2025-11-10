@@ -117,20 +117,6 @@ dotnet test
 4. Configure a variável `baseUrl` para `http://localhost:5000`
 5. Execute as requisições na ordem da collection
 
-### Script de Validação Automatizada
-
-Execute o checklist completo (certifique-se que a API está rodando):
-
-```powershell
-.\docs\test-checklist.ps1
-```
-
-**Se der erro de permissão**, execute antes:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
-```
-
 ## Notas rápidas
 
 - Porta pública: 5000
