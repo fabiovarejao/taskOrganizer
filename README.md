@@ -28,7 +28,7 @@ cd taskOrganizer
 
 ## Como rodar com Docker Compose
 
-1) Na raiz do projeto, garanta o arquivo `.env` (existe um exemplo `.env.example`). O `.env` padrão já contém:
+1) Na raiz do projeto, crie e garanta o arquivo `.env` (existe um exemplo `.env.example`). O `.env` padrão já contém:
 
 ```
 SA_PASSWORD=saIron74Ds!#
@@ -103,7 +103,7 @@ $env:ASPNETCORE_URLS = "http://localhost:5000"; dotnet run
 
 ### Testes Unitários
 
-Na raiz do repositório:
+Na raiz do repositório, pasta src:
 
 ```powershell
 dotnet test
