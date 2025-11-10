@@ -169,8 +169,8 @@ Devemos implementar notificações quando:
 
 ## 🚀 Fase 3: Melhorias Futuras
 
-### 1. Substituir Lazy Loading por Eager Loading Estratégico
-Objetivo de melhorar performance e evitar o problema de N+1 queries.
+### 1. Substituir Lazy Loading por carregamento antecipado e seletivo de dados
+Objetivo: otimizar o desempenho e evitar múltiplas consultas repetitivas ao banco.
 
 ---
 
