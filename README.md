@@ -103,7 +103,7 @@ $env:ASPNETCORE_URLS = "http://localhost:5000"; dotnet run
 
 ### Testes Unitários
 
-Na raiz do repositório, pasta src:
+Na raiz do repositório:
 
 ```powershell
 cd src
